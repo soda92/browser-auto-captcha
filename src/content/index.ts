@@ -23,14 +23,24 @@ function isCaptchaImage(img: HTMLImageElement): boolean {
   return !!(img.src && img.src.includes(VOCODE_PATTERN) && !img.dataset.ocrProcessed);
 }
 
-async function convertImageToBase64(url: string): Promise<string> {
-  const response = await fetch(url);
-  const blob = await response.blob();
+async function captureImageViaCanvas(img: HTMLImageElement): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('No context');
+      
+      // Draw image to canvas
+      ctx.drawImage(img, 0, 0);
+      
+      // Attempt to get data URL (throws if tainted)
+      const dataUrl = canvas.toDataURL('image/png');
+      resolve(dataUrl);
+    } catch (e) {
+      reject(e);
+    }
   });
 }
 
@@ -41,16 +51,41 @@ async function solveCaptcha(img: HTMLImageElement) {
     img.dataset.ocrProcessed = 'true'; // Mark as processed
     console.log('[AutoCaptcha] Found captcha:', img.src);
 
-    const base64 = await convertImageToBase64(img.src);
+    let messageData;
+
+    // Method 1: Try Canvas (Best for one-time tokens, if CORS allows)
+    try {
+      console.log('[AutoCaptcha] Attempting Canvas capture...');
+      const base64 = await captureImageViaCanvas(img);
+      messageData = { image: base64 };
+      console.log('[AutoCaptcha] Canvas capture successful.');
+    } catch (e) {
+      console.warn('[AutoCaptcha] Canvas capture failed (likely CORS). Falling back to Screenshot.', e);
+      
+      // Method 2: Fallback to Screenshot
+      // Scroll into view to ensure we can capture it
+      img.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
+      // Allow a brief moment for scroll to settle
+      await new Promise(r => setTimeout(r, 100));
+
+      const rect = img.getBoundingClientRect();
+      messageData = {
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+        devicePixelRatio: window.devicePixelRatio
+      };
+    }
     
     console.log('[AutoCaptcha] Sending for OCR...');
     const response = await chrome.runtime.sendMessage({
       action: 'SOLVE_CAPTCHA',
-      data: base64,
+      data: messageData,
     });
 
     if (response && response.success) {
-      const text = response.text.trim().replace(/[^a-zA-Z0-9]/g, '');
+      const text = response.text;
       console.log('[AutoCaptcha] Solved:', text);
       fillInput(img, text);
     } else {

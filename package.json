@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "setup": "node scripts/setup-assets.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

@@ -42,9 +42,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     (async () => {
       try {
         await setupOffscreenDocument(OFFSCREEN_DOCUMENT_PATH);
+        
+        let ocrData;
+
+        // Mode 1: Content script sent the image data directly (Canvas capture)
+        if (message.data.image) {
+          ocrData = {
+            imageUri: message.data.image,
+             // No rect needed if image is already cropped/captured
+          };
+        } 
+        // Mode 2: Content script sent coordinates (Screenshot fallback)
+        else {
+          const screenshotUrl = await chrome.tabs.captureVisibleTab(sender.tab?.windowId || chrome.windows.WINDOW_ID_CURRENT, {
+            format: 'png'
+          });
+          ocrData = {
+            imageUri: screenshotUrl,
+            rect: message.data
+          };
+        }
+
         const response = await chrome.runtime.sendMessage({
           action: 'OCR_REQUEST',
-          data: message.data,
+          data: ocrData,
         });
         sendResponse(response);
       } catch (error) {
