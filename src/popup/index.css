@@ -1,0 +1,49 @@
+:root {
+  --primary: #3b82f6;
+  --bg: #f9fafb;
+  --text: #1f2937;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+.container {
+  padding: 1rem;
+}
+
+.header {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+}
+
+.card {
+  background: white;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin-bottom: 1rem;
+}
+
+.toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+button {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
